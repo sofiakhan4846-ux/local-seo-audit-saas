@@ -7,15 +7,56 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-st.set_page_config(page_title="Local SEO Auditor", page_icon="🔍")
+# Page Configuration
+st.set_page_config(page_title="Local SEO Audit SaaS", page_icon="🔍", layout="centered")
 
-st.title("🔍 Local SEO Audit SaaS Tool")
-st.subheader("Automated Real-Time Executive SEO Report Generator")
+# Custom CSS for Modern SaaS Aesthetic
+st.markdown("""
+    <style>
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1e293b;
+        text-align: center;
+        margin-bottom: 0px;
+    }
+    .main-title span {
+        color: #2563eb;
+    }
+    .subtitle {
+        font-size: 1.1rem;
+        color: #64748b;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 30px;
+    }
+    .stButton>button {
+        width: 100%;
+        background-color: #16a34a;
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #15803d;
+        color: white;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Sidebar for White-label
+# Sidebar for White-label Agency Branding
 agency_name = st.sidebar.text_input("Agency Name (White-Label)", value="Digital Growth Agency")
 
+# Modern Hero Section Header
+st.markdown('<p class="main-title">Get found by more local customers — <br><span>we fix your local presence for you</span></p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Run a free 60-second scan to see what is keeping your business out of local search results. Generate a professional executive PDF report instantly.</p>', unsafe_allow_html=True)
+
 st.write("---")
+
+# Input Form Layout
 website_url = st.text_input("Enter Client Website URL:", placeholder="https://example.com")
 business_name = st.text_input("Business Name:", placeholder="e.g. Acme Dental Care")
 
@@ -157,9 +198,10 @@ def generate_pdf(biz_name, url, agency, audit_data):
     buffer.seek(0)
     return buffer
 
-if st.button("Run SEO Audit"):
+# Styled SaaS Call-To-Action Button
+if st.button("Run My Free Local SEO Audit →"):
     if website_url:
-        with st.spinner("Scanning website..."):
+        with st.spinner("Scanning website and generating report..."):
             results = audit_website(website_url)
         st.success("Website successfully scanned!")
         
