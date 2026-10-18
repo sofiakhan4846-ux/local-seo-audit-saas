@@ -1,5 +1,6 @@
 import io
 import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import streamlit as st
 from reportlab.lib import colors
@@ -47,11 +48,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar for White-label Agency Branding & Advanced API
+# Sidebar for White-label Agency Branding
 agency_name = st.sidebar.text_input("Agency Name (White-Label)", value="Digital Growth Agency")
-st.sidebar.markdown("---")
-st.sidebar.subheader("Advanced Scraping Settings")
-scraper_api_key = st.sidebar.text_input("ScraperAPI Key (Optional)", type="password", help="Get a free key from scraperapi.com to bypass Apple/Nike bot blocks.")
 
 # Modern Hero Section Header
 st.markdown('<p class="main-title">Get found by more local customers — <br><span>we fix your local presence for you</span></p>', unsafe_allow_html=True)
@@ -63,7 +61,7 @@ st.write("---")
 website_url = st.text_input("Enter Client Website URL:", placeholder="https://example.com")
 business_name = st.text_input("Business Name:", placeholder="e.g. Acme Dental Care")
 
-def audit_website(url, api_key=""):
+def audit_website(url):
     results = {
         "has_title": False, "title": "",
         "has_meta_desc": False, "meta_desc": "",
@@ -77,14 +75,9 @@ def audit_website(url, api_key=""):
             url = "https://" + url
             results["is_https"] = True
             
-        if api_key:
-            # Route through ScraperAPI to bypass bot protection / Cloudflare
-            payload = {'api_key': api_key, 'url': url}
-            response = requests.get('http://api.scraperapi.com', params=payload, timeout=25)
-        else:
-            # Standard direct request with User-Agent
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'}
-            response = requests.get(url, headers=headers, timeout=10)
+        # Use cloudscraper to bypass Cloudflare and bot checks automatically
+        scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True})
+        response = scraper.get(url, timeout=15)
 
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -212,7 +205,7 @@ def generate_pdf(biz_name, url, agency, audit_data):
 if st.button("Run My Free Local SEO Audit →"):
     if website_url:
         with st.spinner("Scanning website and generating report..."):
-            results = audit_website(website_url, scraper_api_key)
+            results = audit_website(website_url)
         st.success("Website successfully scanned!")
         
         col1, col2, col3 = st.columns(3)
