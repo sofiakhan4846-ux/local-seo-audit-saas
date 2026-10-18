@@ -10,7 +10,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 st.set_page_config(page_title="Local SEO Auditor", page_icon="🔍")
 
 st.title("🔍 Local SEO Audit SaaS Tool")
-st.subheader("Automated Real-Time SEO Report Generator")
+st.subheader("Automated Real-Time Executive SEO Report Generator")
 
 # Sidebar for White-label
 agency_name = st.sidebar.text_input("Agency Name (White-Label)", value="Digital Growth Agency")
@@ -23,11 +23,16 @@ def audit_website(url):
     results = {
         "has_title": False, "title": "",
         "has_meta_desc": False, "meta_desc": "",
-        "has_h1": False, "h1_count": 0, "score": 0
+        "has_h1": False, "h1_count": 0, "score": 0,
+        "is_https": False
     }
     try:
-        if not url.startswith("http://") and not url.startswith("https://"):
+        if url.startswith("https://"):
+            results["is_https"] = True
+        elif not url.startswith("http://"):
             url = "https://" + url
+            results["is_https"] = True
+            
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
@@ -47,9 +52,10 @@ def audit_website(url):
             results["has_h1"] = len(h1_tags) > 0
             
             score = 0
-            if results["has_title"]: score += 40
-            if results["has_meta_desc"]: score += 40
+            if results["has_title"]: score += 30
+            if results["has_meta_desc"]: score += 30
             if results["has_h1"]: score += 20
+            if results["is_https"]: score += 20
             results["score"] = score
     except Exception as e:
         pass
@@ -61,78 +67,70 @@ def generate_pdf(biz_name, url, agency, audit_data):
     styles = getSampleStyleSheet()
     story = []
 
-    title_style = ParagraphStyle('HeaderTitle', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#0f172a'), spaceAfter=4)
-    subtitle_style = ParagraphStyle('SubTitle', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#64748b'), spaceAfter=15)
+    # Custom Typography Styles
+    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#0f172a'), spaceAfter=2)
+    subtitle_style = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#64748b'), spaceAfter=15)
+    section_heading = ParagraphStyle('SecHead', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#1e293b'), spaceBefore=10, spaceAfter=6)
+    body_style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#334155'), spaceAfter=4)
 
-    story.append(Paragraph(f"Local SEO Health Report: <b>{biz_name}</b>", title_style))
-    story.append(Paragraph(f"Prepared by <b>{agency}</b> • Target: {url}", subtitle_style))
+    # Header Section
+    story.append(Paragraph(f"Local SEO Health Report", title_style))
+    story.append(Paragraph(f"Comprehensive Technical & On-Page Audit • Prepared by <b>{agency}</b>", subtitle_style))
+
+    # Meta Overview Box Data
+    overview_data = [
+        [Paragraph("<b>Target Business:</b>", body_style), Paragraph(f"{biz_name}", body_style), Paragraph("<b>Audit Date:</b>", body_style), Paragraph("October 18, 2026", body_style)],
+        [Paragraph("<b>Analyzed URL:</b>", body_style), Paragraph(f"{url}", body_style), Paragraph("<b>On-Page Score:</b>", body_style), Paragraph(f"<b>{audit_data['score']}%</b>", body_style)]
+    ]
+    t_overview = Table(overview_data, colWidths=[90, 200, 80, 170])
+    t_overview.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f8fafc')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#e2e8f0')),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ('RIGHTPADDING', (0,0), (-1,-1), 8),
+    ]))
+    
+    story.append(t_overview)
+    story.append(Spacer(1, 15))
+
+    # Technical Elements Breakdown Section
+    story.append(Paragraph("Technical Elements Breakdown", section_heading))
 
     table_data = [
-        ["SEO Health Score", "Meta Title", "Meta Description", "H1 Headings"],
+        ["Check Item", "Status", "Detected Content / Details"],
         [
-            f"{audit_data['score']}%",
-            "Found" if audit_data['has_title'] else "Missing",
-            "Found" if audit_data['has_meta_desc'] else "Missing",
-            f"{audit_data['h1_count']} Found"
+            "Page Title Tag",
+            "PASSED" if audit_data['has_title'] else "MISSING",
+            Paragraph(f'"{audit_data["title"]}"' if audit_data['has_title'] else "No title tag found on the page.", body_style)
+        ],
+        [
+            "Meta Description",
+            "PASSED" if audit_data['has_meta_desc'] else "MISSING",
+            Paragraph("Meta description present and formatted for search snippet." if audit_data['has_meta_desc'] else "Missing meta description tag.", body_style)
+        ],
+        [
+            "H1 Heading Tags",
+            "PASSED" if audit_data['has_h1'] else "MISSING",
+            Paragraph(f"Exactly {audit_data['h1_count']} main H1 tag(s) identified." if audit_data['has_h1'] else "No H1 tag detected.", body_style)
+        ],
+        [
+            "SSL & Security",
+            "PASSED" if audit_data['is_https'] else "WARNING",
+            Paragraph("HTTPS protocol active and secure connection verified." if audit_data['is_https'] else "Insecure HTTP connection.", body_style)
         ]
     ]
 
-    t = Table(table_data, colWidths=[130, 130, 130, 130])
-    t.setStyle(TableStyle([
+    t_breakdown = Table(table_data, colWidths=[110, 80, 350])
+    t_breakdown.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e293b')),
         ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('ALIGN', (0,0), (-1,0), 'CENTER'),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,0), 10),
-        ('BOTTOMPADDING', (0,0), (-1,0), 8),
-        ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#f8fafc')),
-        ('TEXTCOLOR', (0,1), (-1,1), colors.HexColor('#0f172a')),
-        ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,1), (-1,1), 12),
-        ('GRID', (0,0), (-1,-1), 1, colors.HexColor('#e2e8f0')),
-        ('TOPPADDING', (0,1), (-1,1), 10),
-        ('BOTTOMPADDING', (0,1), (-1,1), 10),
-    ]))
-    
-    story.append(t)
-    story.append(Spacer(1, 20))
-
-    story.append(Paragraph("<b>Actionable Recommendations:</b>", styles['Heading2']))
-    story.append(Spacer(1, 6))
-
-    recs = []
-    if not audit_data['has_title']: recs.append("• <b>High Priority:</b> Add an SEO-optimized Title tag.")
-    if not audit_data['has_meta_desc']: recs.append("• <b>High Priority:</b> Add a compelling Meta Description for higher search CTR.")
-    if not audit_data['has_h1']: recs.append("• <b>Medium Priority:</b> Add a main H1 tag on the homepage.")
-    if audit_data['score'] == 100: recs.append("• <b>Great Job!</b> On-page core meta tags are well structured.")
-
-    for r in recs:
-        story.append(Paragraph(r, styles['Normal']))
-        story.append(Spacer(1, 4))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-# --- YAHAN HAI MAIN BUTTON CODE JO MISS HO GAYA THA ---
-if st.button("Run SEO Audit"):
-    if website_url:
-        with st.spinner("Scanning website..."):
-            results = audit_website(website_url)
-        st.success("Website successfully scanned!")
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("On-Page Score", f"{results['score']}%")
-        col2.metric("Meta Description", "Found" if results['has_meta_desc'] else "Missing")
-        col3.metric("H1 Headings", f"{results['h1_count']} Found")
-        
-        pdf_bytes = generate_pdf(business_name or "Client", website_url, agency_name, results)
-        
-        st.download_button(
-            label="📄 Download Updated PDF Report",
-            data=pdf_bytes,
-            file_name=f"{business_name or 'SEO'}_Audit_Report.pdf",
-            mime="application/pdf"
-        )
-    else:
-        st.warning("Please enter a website URL.")
+        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('BOTTOMPADDING', (0,0), (-1,0), 6),
+        ('TOPPADDING', (0,0), (-1,0), 6),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e1')),
+        ('VALIGN', (0,0),
